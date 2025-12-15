@@ -32,14 +32,15 @@ jobs:
           fi
           BUILD_BLOCK="<p>Build: $BUILD_TS - SHA: $BUILD_SHA - Tag: $BUILD_TAG</p>"
 
-          # Si el bloque ya existe, reemplázalo
           if grep -q "<!-- BUILD_INFO -->" "$SITE_INDEX"; then
-            sed -i "/<!-- BUILD_INFO -->/,/<!-- END_BUILD_INFO -->/c\\
-<!-- BUILD_INFO -->\\
-$BUILD_BLOCK\\
-<!-- END_BUILD_INFO -->" "$SITE_INDEX"
+            # Reemplaza el bloque existente usando heredoc
+            awk -v block="$BUILD_BLOCK" '
+              /<!-- BUILD_INFO -->/{print; print block; inblock=1; next}
+              /<!-- END_BUILD_INFO -->/{inblock=0; print; next}
+              !inblock{print}
+            ' "$SITE_INDEX" > tmp_index.html && mv tmp_index.html "$SITE_INDEX"
           else
-            # Si no existe, insértalo antes de </body>, o al final si no hay </body>
+            # Inserta antes de </body> o al final si no hay </body>
             if grep -q "</body>" "$SITE_INDEX"; then
               sed -i "/<\/body>/i <!-- BUILD_INFO -->\n$BUILD_BLOCK\n<!-- END_BUILD_INFO -->" "$SITE_INDEX"
             else
